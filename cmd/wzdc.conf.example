@@ -1,0 +1,3 @@
+transport:
+  host: 123.123.123.123
+  port: 4222
