@@ -36,14 +36,18 @@ func (wz *WzcDaemon) Run() *WzcDaemon {
 	var err error
 
 	wz.GetTransport().Start()
-	wz.channels.console, err = wz.GetTransport().GetSubscriber().Subscribe(wzlib.CHANNEL_CONSOLE, wz.onConsoleEvent)
+	wz.channels.console, err = wz.GetTransport().
+		GetSubscriber().
+		Subscribe(wzlib.CHANNEL_CONSOLE, wz.onConsoleEvent)
 	if err != nil {
 		log.Panicf("Unable to subscribe to a console channel: %s\n", err.Error())
 	}
 
-	wz.channels.response, err = wz.GetTransport().GetSubscriber().Subscribe(wzlib.CHANNEL_RESPONSE, wz.onResponseEvent)
+	wz.channels.response, err = wz.GetTransport().
+		GetSubscriber().
+		Subscribe(wzlib.CHANNEL_RESPONSE, wz.onResponseEvent)
 	if err != nil {
-		log.Panicf("Unable to subscribe to a console channel: %s\n", err.Error())
+		log.Panicf("Unable to subscribe to a response channel: %s\n", err.Error())
 	}
 
 	return wz
