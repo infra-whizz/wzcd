@@ -27,7 +27,7 @@ func NewWzcDaemon() *WzcDaemon {
 	wz.transport = wzlib_transport.NewWizPubSub()
 	wz.channels = new(WzChannels)
 	wz.events = NewWzcDaemonEvents(wz)
-	wz.db = wzlib_database.NewWzDBH()
+	wz.db = wzlib_database.NewWzDBH().WithControllerAPI()
 	return wz
 }
 
