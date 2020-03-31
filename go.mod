@@ -6,7 +6,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1
 	github.com/golang/protobuf v1.3.5 // indirect
-	github.com/infra-whizz/wzlib v0.0.0-20200320133045-1592e294227f
+	github.com/infra-whizz/wzlib v0.0.0-20200327124338-a6e7e3b32e40
 	github.com/isbm/go-nanoconf v0.0.0-20200219130459-fc328232826c
 	github.com/nats-io/nats.go v1.9.1
 	github.com/urfave/cli/v2 v2.2.0
