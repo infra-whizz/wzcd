@@ -3,9 +3,11 @@ package wzcd
 import (
 	"log"
 
-	"github.com/infra-whizz/wzlib"
+	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
 
 	"github.com/davecgh/go-spew/spew"
+	wzcd_events "github.com/infra-whizz/wzcd/events"
+	"github.com/infra-whizz/wzlib"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
 	"github.com/nats-io/nats.go"
 )
