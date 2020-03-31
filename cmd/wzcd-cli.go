@@ -11,10 +11,23 @@ import (
 func run(ctx *cli.Context) error {
 	conf := nanoconf.NewConfig(ctx.String("config"))
 	controller := wzcd.NewWzcDaemon()
+
+	// Setup MQ
 	controller.GetTransport().AddNatsServerURL(
 		conf.Find("transport").String("host", ""),
 		conf.Find("transport").DefaultInt("port", "", 4222),
 	)
+
+	// Setup DB
+	confDb := conf.Find("db")
+	controller.GetDb().SetHost(confDb.String("host", "")).
+		SetPort(confDb.DefaultInt("port", "", 26257)).
+		SetUser(confDb.String("user", "")).
+		SetDbName(confDb.String("database", "")).
+		SetSSLConf(confDb.String("ssl_root", ""),
+			confDb.String("ssl_key", ""),
+			confDb.String("ssl_cert", ""))
+
 	controller.Run().AppLoop()
 
 	cli.ShowAppHelpAndExit(ctx, 1)
