@@ -32,7 +32,7 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 	switch envelope.Type {
 	case wzlib_transport.MSGTYPE_CLIENT:
 		spew.Dump(envelope.Payload)
-		command, ok := envelope.Payload["command"]
+		command, ok := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND]
 		if !ok {
 			log.Println("Discarding console message: unknown command")
 			return
@@ -62,8 +62,8 @@ func (wz *WzcDaemonEvents) sendListClientsNew() {
 	// Construct batch of messages and send them one by one
 	// NATS should run in streaming mode instead (!!)
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
-	envelope.Payload["batch.max"] = 1
-	envelope.Payload["clients.new"] = "list of structures here in a future"
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
@@ -95,7 +95,7 @@ func (wz *WzcDaemonEvents) registerNewClient(envelope *wzlib_transport.WzGeneric
 	wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
 
 	response := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_REGISTRATION)
-	response.Payload["registration.status"] = "pending"
+	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = "pending"
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
 
 }
