@@ -1,11 +1,11 @@
 package wzcd
 
 import (
-	"log"
 	"time"
 
 	wzlib "github.com/infra-whizz/wzlib"
 	wzlib_database "github.com/infra-whizz/wzlib/database"
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
 	"github.com/nats-io/nats.go"
 )
@@ -20,6 +20,7 @@ type WzcDaemon struct {
 	transport *wzlib_transport.WzdPubSub
 	channels  *WzChannels
 	db        *wzlib_database.WzDBH
+	wzlib_logger.WzLogger
 }
 
 func NewWzcDaemon() *WzcDaemon {
@@ -51,7 +52,7 @@ func (wz *WzcDaemon) Run() *WzcDaemon {
 		GetSubscriber().
 		Subscribe(wzlib.CHANNEL_CONSOLE, wz.events.OnConsoleEvent)
 	if err != nil {
-		log.Panicf("Unable to subscribe to a console channel: %s\n", err.Error())
+		wz.GetLogger().Panicf("Unable to subscribe to a console channel: %s\n", err.Error())
 	}
 
 	// Subscribe to the response channel
@@ -59,7 +60,7 @@ func (wz *WzcDaemon) Run() *WzcDaemon {
 		GetSubscriber().
 		Subscribe(wzlib.CHANNEL_CLIENT, wz.events.OnClientEvent)
 	if err != nil {
-		log.Panicf("Unable to subscribe to a response channel: %s\n", err.Error())
+		wz.GetLogger().Panicf("Unable to subscribe to a response channel: %s\n", err.Error())
 	}
 
 	// Open DB

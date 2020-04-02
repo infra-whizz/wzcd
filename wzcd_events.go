@@ -1,13 +1,11 @@
 package wzcd
 
 import (
-	"log"
-
-	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
-
 	"github.com/davecgh/go-spew/spew"
 	wzcd_events "github.com/infra-whizz/wzcd/events"
 	"github.com/infra-whizz/wzlib"
+	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
 	"github.com/nats-io/nats.go"
 )
@@ -15,6 +13,7 @@ import (
 type WzcDaemonEvents struct {
 	daemon  *WzcDaemon
 	console *wzcd_events.WzConsoleEvents
+	wzlib_logger.WzLogger
 }
 
 // NewWzcDaemonEvents creates new instance of the daemon events class
@@ -27,14 +26,14 @@ func NewWzcDaemonEvents(daemon *WzcDaemon) *WzcDaemonEvents {
 
 // OnConsoleEvent receives and dispatches messages on console channel
 func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
-	log.Println("On Console channel Event")
+	wz.GetLogger().Debugln("On Console channel Event")
 	envelope := wzlib_transport.NewWzEventMsgUtils().GetMessage(m.Data)
 	switch envelope.Type {
 	case wzlib_transport.MSGTYPE_CLIENT:
 		spew.Dump(envelope.Payload)
 		command, ok := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND]
 		if !ok {
-			log.Println("Discarding console message: unknown command")
+			wz.GetLogger().Debugln("Discarding console message: unknown command")
 			return
 		}
 
@@ -44,37 +43,39 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 		case "list.clients.rejected":
 			go wz.sendListClientsRejected()
 		default:
-			log.Println("Discarding console message: unsupported command -", command)
+			wz.GetLogger().Debugln("Discarding console message: unsupported command -", command)
 		}
 	default:
-		log.Println("Discarding unknown message from console channel:")
+		wz.GetLogger().Debugln("Discarding unknown message from console channel:")
 		spew.Dump(envelope)
 	}
 }
 
 func (wz *WzcDaemonEvents) sendListClientsNew() {
-	log.Println("Get list of the new clients")
-	log.Println("Send message[s] back")
+	wz.GetLogger().Debugln("Get list of the new clients")
+	wz.GetLogger().Debugln("Send message[s] back")
 
 	// call db stuff, obtain everything
-	//wz.daemon.GetDb().GetControllerAPI().Clients.GetNew()
+	registered := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRegistered()
 
-	// Construct batch of messages and send them one by one
+	// TODO: Construct batch of messages and send them one by one
 	// NATS should run in streaming mode instead (!!)
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"registered": registered}
 
+	// send
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
 func (wz *WzcDaemonEvents) sendListClientsRejected() {
-	log.Println("Get list of the rejected clients")
-	log.Println("Send message[s] back")
+	wz.GetLogger().Debugln("Get list of the rejected clients")
+	wz.GetLogger().Debugln("Send message[s] back")
 }
 
 // OnClientEvent receives and dispatches messages on client channel
 func (wz *WzcDaemonEvents) OnClientEvent(m *nats.Msg) {
-	log.Println("On Client channel Event")
+	wz.GetLogger().Debugln("On Client channel Event")
 	envelope := wzlib_transport.NewWzEventMsgUtils().GetMessage(m.Data)
 
 	switch envelope.Type {
@@ -83,19 +84,17 @@ func (wz *WzcDaemonEvents) OnClientEvent(m *nats.Msg) {
 		response.Payload = envelope.Payload
 		wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
 	case wzlib_transport.MSGTYPE_REGISTRATION:
-		log.Println("Registering new client")
+		wz.GetLogger().Debugln("Registering new client")
 		wz.registerNewClient(envelope)
 	default:
-		log.Println("Discarding unknown message from client channel:")
+		wz.GetLogger().Debugln("Discarding unknown message from client channel:")
 		spew.Dump(envelope)
 	}
 }
 
 func (wz *WzcDaemonEvents) registerNewClient(envelope *wzlib_transport.WzGenericMessage) {
-	wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
-
+	status := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
 	response := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_REGISTRATION)
-	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = "pending"
+	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"status": status}
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
-
 }
