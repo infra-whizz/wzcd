@@ -42,6 +42,20 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 			go wz.sendListClientsNew()
 		case "list.clients.rejected":
 			go wz.sendListClientsRejected()
+		case "clients.accept":
+			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+			if params != nil {
+				fingerprints := params.(map[string]interface{})["fingerprints"]
+				if !ok {
+					wz.GetLogger().Errorln("Discarding request to accept clients: unspecified target")
+				} else {
+					if fingerprints != nil {
+						go wz.acceptNewClients(fingerprints.([]interface{}))
+					} else {
+						go wz.acceptNewClients(make([]interface{}, 0))
+					}
+				}
+			}
 		default:
 			wz.GetLogger().Debugln("Discarding console message: unsupported command -", command)
 		}
@@ -51,10 +65,23 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 	}
 }
 
-func (wz *WzcDaemonEvents) sendListClientsNew() {
-	wz.GetLogger().Debugln("Get list of the new clients")
-	wz.GetLogger().Debugln("Send message[s] back")
+func (wz *WzcDaemonEvents) acceptNewClients(fingerprints []interface{}) {
+	wz.GetLogger().Infoln("Accepting clients")
+	fp := make([]string, len(fingerprints))
+	for idx, f := range fingerprints {
+		fp[idx] = f.(string)
+	}
+	missing := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Accept(fp...)
 
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"accepted.missing": missing}
+
+	// send
+	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
+
+func (wz *WzcDaemonEvents) sendListClientsNew() {
 	// call db stuff, obtain everything
 	registered := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRegistered()
 
@@ -69,8 +96,14 @@ func (wz *WzcDaemonEvents) sendListClientsNew() {
 }
 
 func (wz *WzcDaemonEvents) sendListClientsRejected() {
-	wz.GetLogger().Debugln("Get list of the rejected clients")
-	wz.GetLogger().Debugln("Send message[s] back")
+	rejected := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRejected()
+
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"rejected": rejected}
+
+	// send
+	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
 // OnClientEvent receives and dispatches messages on client channel
