@@ -92,6 +92,7 @@ func (wz *WzcDaemonEvents) searchClients(query string) {
 
 	found := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Search(query)
 
+	// XXX - refactor - repeating code
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
 	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"clients.found": found}
@@ -101,6 +102,8 @@ func (wz *WzcDaemonEvents) searchClients(query string) {
 
 func (wz *WzcDaemonEvents) acceptNewClients(fingerprints []interface{}) {
 	wz.GetLogger().Infoln("Accepting clients")
+
+	// XXX - refactor - fingerprints: interface to string
 	fp := make([]string, len(fingerprints))
 	for idx, f := range fingerprints {
 		fp[idx] = f.(string)
@@ -117,12 +120,15 @@ func (wz *WzcDaemonEvents) acceptNewClients(fingerprints []interface{}) {
 
 func (wz *WzcDaemonEvents) rejectClients(fingerprints []interface{}) {
 	wz.GetLogger().Infoln("Rejecting clients")
+
+	// XXX - refactor - fingerprints: interface to string
 	fp := make([]string, len(fingerprints))
 	for idx, f := range fingerprints {
 		fp[idx] = f.(string)
 	}
 	missing := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Reject(fp...)
 
+	// XXX - refactor - repeating code
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
 	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"rejected.missing": missing}
@@ -137,6 +143,8 @@ func (wz *WzcDaemonEvents) sendListClientsNew() {
 
 	// TODO: Construct batch of messages and send them one by one
 	// NATS should run in streaming mode instead (!!)
+
+	// XXX - refactor - repeating code
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
 	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"registered": registered}
@@ -148,6 +156,7 @@ func (wz *WzcDaemonEvents) sendListClientsNew() {
 func (wz *WzcDaemonEvents) sendListClientsRejected() {
 	rejected := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRejected()
 
+	// XXX - refactor - repeating code
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
 	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"rejected": rejected}
