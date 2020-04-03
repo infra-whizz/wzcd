@@ -28,9 +28,9 @@ func NewWzcDaemonEvents(daemon *WzcDaemon) *WzcDaemonEvents {
 func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 	wz.GetLogger().Debugln("On Console channel Event")
 	envelope := wzlib_transport.NewWzEventMsgUtils().GetMessage(m.Data)
+	spew.Dump(envelope)
 	switch envelope.Type {
 	case wzlib_transport.MSGTYPE_CLIENT:
-		spew.Dump(envelope.Payload)
 		command, ok := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND]
 		if !ok {
 			wz.GetLogger().Debugln("Discarding console message: unknown command")
