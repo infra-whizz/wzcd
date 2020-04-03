@@ -56,6 +56,20 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 					}
 				}
 			}
+		case "clients.reject":
+			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+			if params != nil {
+				fingerprints := params.(map[string]interface{})["fingerprints"]
+				if !ok {
+					wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
+				} else {
+					if fingerprints != nil {
+						go wz.rejectClients(fingerprints.([]interface{}))
+					} else {
+						go wz.rejectClients(make([]interface{}, 0))
+					}
+				}
+			}
 		default:
 			wz.GetLogger().Debugln("Discarding console message: unsupported command -", command)
 		}
@@ -76,6 +90,22 @@ func (wz *WzcDaemonEvents) acceptNewClients(fingerprints []interface{}) {
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
 	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"accepted.missing": missing}
+
+	// send
+	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
+
+func (wz *WzcDaemonEvents) rejectClients(fingerprints []interface{}) {
+	wz.GetLogger().Infoln("Rejecting clients")
+	fp := make([]string, len(fingerprints))
+	for idx, f := range fingerprints {
+		fp[idx] = f.(string)
+	}
+	missing := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Reject(fp...)
+
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"rejected.missing": missing}
 
 	// send
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
