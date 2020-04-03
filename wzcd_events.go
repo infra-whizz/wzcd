@@ -67,6 +67,16 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 					go wz.rejectClients(fingerprints.([]interface{}))
 				}
 			}
+		case "clients.delete":
+			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+			if params != nil {
+				fingerprints := params.(map[string]interface{})["fingerprints"]
+				if fingerprints == nil {
+					wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
+				} else {
+					go wz.deleteClients(fingerprints.([]interface{}))
+				}
+			}
 		case "clients.search":
 			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
 			if params != nil {
@@ -113,6 +123,25 @@ func (wz *WzcDaemonEvents) acceptNewClients(fingerprints []interface{}) {
 	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
 	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
 	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"accepted.missing": missing}
+
+	// send
+	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
+
+func (wz *WzcDaemonEvents) deleteClients(fingerprints []interface{}) {
+	wz.GetLogger().Infoln("Deleting clients")
+
+	// XXX - refactor - fingerprints: interface to string
+	fp := make([]string, len(fingerprints))
+	for idx, f := range fingerprints {
+		fp[idx] = f.(string)
+	}
+	missing := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Delete(fp...)
+
+	// XXX - refactor - repeating code
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"deleted.missing": missing}
 
 	// send
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
