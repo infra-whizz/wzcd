@@ -60,14 +60,21 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
 			if params != nil {
 				fingerprints := params.(map[string]interface{})["fingerprints"]
-				if !ok {
+				if fingerprints == nil {
 					wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
+					go wz.rejectClients(make([]interface{}, 0))
 				} else {
-					if fingerprints != nil {
-						go wz.rejectClients(fingerprints.([]interface{}))
-					} else {
-						go wz.rejectClients(make([]interface{}, 0))
-					}
+					go wz.rejectClients(fingerprints.([]interface{}))
+				}
+			}
+		case "clients.search":
+			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+			if params != nil {
+				query := params.(map[string]interface{})["query"]
+				if query == nil || query.(string) == "" {
+					wz.GetLogger().Errorln("Discarding search request: unspecified query")
+				} else {
+					go wz.searchClients(query.(string))
 				}
 			}
 		default:
@@ -75,8 +82,21 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 		}
 	default:
 		wz.GetLogger().Debugln("Discarding unknown message from console channel:")
-		spew.Dump(envelope)
 	}
+}
+
+// Search clients and send back the result
+func (wz *WzcDaemonEvents) searchClients(query string) {
+	wz.GetLogger().Infoln("Sarching for clients")
+	wz.GetLogger().Debugf("Serch query: '%s'", query)
+
+	found := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Search(query)
+
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"clients.found": found}
+
+	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
 func (wz *WzcDaemonEvents) acceptNewClients(fingerprints []interface{}) {
