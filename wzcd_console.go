@@ -1,4 +1,4 @@
-package wzcd_events
+package wzcd
 
 type WzConsoleEvents struct{}
 
