@@ -87,3 +87,19 @@ func (wz *WzConsoleEvents) rejectClients(fingerprints []interface{}) {
 	// send
 	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
+
+func (wz *WzConsoleEvents) sendListClientsNew() {
+	// call db stuff, obtain everything
+	registered := wz.dispatcher.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRegistered()
+
+	// TODO: Construct batch of messages and send them one by one
+	// NATS should run in streaming mode instead (!!)
+
+	// XXX - refactor - repeating code
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"registered": registered}
+
+	// send
+	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
