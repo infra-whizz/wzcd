@@ -16,10 +16,10 @@ type WzChannels struct {
 }
 
 type WzcDaemon struct {
-	events    *WzcDaemonEvents
-	transport *wzlib_transport.WzdPubSub
-	channels  *WzChannels
-	db        *wzlib_database.WzDBH
+	dispatcher *WzcDaemonDispatcher
+	transport  *wzlib_transport.WzdPubSub
+	channels   *WzChannels
+	db         *wzlib_database.WzDBH
 	wzlib_logger.WzLogger
 }
 
@@ -27,7 +27,7 @@ func NewWzcDaemon() *WzcDaemon {
 	wz := new(WzcDaemon)
 	wz.transport = wzlib_transport.NewWizPubSub()
 	wz.channels = new(WzChannels)
-	wz.events = NewWzcDaemonEvents(wz)
+	wz.dispatcher = NewWzcDaemonDispatcher(wz)
 	wz.db = wzlib_database.NewWzDBH().WithControllerAPI()
 	return wz
 }
@@ -50,7 +50,7 @@ func (wz *WzcDaemon) Run() *WzcDaemon {
 	wz.GetTransport().Start()
 	wz.channels.console, err = wz.GetTransport().
 		GetSubscriber().
-		Subscribe(wzlib.CHANNEL_CONSOLE, wz.events.OnConsoleEvent)
+		Subscribe(wzlib.CHANNEL_CONSOLE, wz.dispatcher.OnConsoleEvent)
 	if err != nil {
 		wz.GetLogger().Panicf("Unable to subscribe to a console channel: %s\n", err.Error())
 	}
@@ -58,7 +58,7 @@ func (wz *WzcDaemon) Run() *WzcDaemon {
 	// Subscribe to the response channel
 	wz.channels.clients, err = wz.GetTransport().
 		GetSubscriber().
-		Subscribe(wzlib.CHANNEL_CLIENT, wz.events.OnClientEvent)
+		Subscribe(wzlib.CHANNEL_CLIENT, wz.dispatcher.OnClientEvent)
 	if err != nil {
 		wz.GetLogger().Panicf("Unable to subscribe to a response channel: %s\n", err.Error())
 	}

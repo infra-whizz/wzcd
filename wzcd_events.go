@@ -9,22 +9,22 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-type WzcDaemonEvents struct {
+type WzcDaemonDispatcher struct {
 	daemon  *WzcDaemon
 	console *WzConsoleEvents
 	wzlib_logger.WzLogger
 }
 
-// NewWzcDaemonEvents creates new instance of the daemon events class
-func NewWzcDaemonEvents(daemon *WzcDaemon) *WzcDaemonEvents {
-	d := new(WzcDaemonEvents)
+// NewWzcDaemonDispatcher creates new instance of the daemon events class
+func NewWzcDaemonDispatcher(daemon *WzcDaemon) *WzcDaemonDispatcher {
+	d := new(WzcDaemonDispatcher)
 	d.daemon = daemon
-	d.console = NewWzConsoleEvents()
+	d.console = NewWzConsoleEvents(d)
 	return d
 }
 
 // OnConsoleEvent receives and dispatches messages on console channel
-func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
+func (wz *WzcDaemonDispatcher) OnConsoleEvent(m *nats.Msg) {
 	wz.GetLogger().Debugln("On Console channel Event")
 	envelope := wzlib_transport.NewWzEventMsgUtils().GetMessage(m.Data)
 	spew.Dump(envelope)
@@ -49,9 +49,9 @@ func (wz *WzcDaemonEvents) OnConsoleEvent(m *nats.Msg) {
 					wz.GetLogger().Errorln("Discarding request to accept clients: unspecified target")
 				} else {
 					if fingerprints != nil {
-						go wz.acceptNewClients(fingerprints.([]interface{}))
+						go wz.console.acceptNewClients(fingerprints.([]interface{}))
 					} else {
-						go wz.acceptNewClients(make([]interface{}, 0))
+						go wz.console.acceptNewClients(make([]interface{}, 0))
 					}
 				}
 			}
@@ -113,7 +113,7 @@ func (wz *WzcDaemonDispatcher) deleteClients(fingerprints []interface{}) {
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
-func (wz *WzcDaemonEvents) rejectClients(fingerprints []interface{}) {
+func (wz *WzcDaemonDispatcher) rejectClients(fingerprints []interface{}) {
 	wz.GetLogger().Infoln("Rejecting clients")
 
 	// XXX - refactor - fingerprints: interface to string
@@ -132,7 +132,7 @@ func (wz *WzcDaemonEvents) rejectClients(fingerprints []interface{}) {
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
-func (wz *WzcDaemonEvents) sendListClientsNew() {
+func (wz *WzcDaemonDispatcher) sendListClientsNew() {
 	// call db stuff, obtain everything
 	registered := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRegistered()
 
@@ -148,7 +148,7 @@ func (wz *WzcDaemonEvents) sendListClientsNew() {
 	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
-func (wz *WzcDaemonEvents) sendListClientsRejected() {
+func (wz *WzcDaemonDispatcher) sendListClientsRejected() {
 	rejected := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRejected()
 
 	// XXX - refactor - repeating code
@@ -161,7 +161,7 @@ func (wz *WzcDaemonEvents) sendListClientsRejected() {
 }
 
 // OnClientEvent receives and dispatches messages on client channel
-func (wz *WzcDaemonEvents) OnClientEvent(m *nats.Msg) {
+func (wz *WzcDaemonDispatcher) OnClientEvent(m *nats.Msg) {
 	wz.GetLogger().Debugln("On Client channel Event")
 	envelope := wzlib_transport.NewWzEventMsgUtils().GetMessage(m.Data)
 
@@ -179,7 +179,7 @@ func (wz *WzcDaemonEvents) OnClientEvent(m *nats.Msg) {
 	}
 }
 
-func (wz *WzcDaemonEvents) registerNewClient(envelope *wzlib_transport.WzGenericMessage) {
+func (wz *WzcDaemonDispatcher) registerNewClient(envelope *wzlib_transport.WzGenericMessage) {
 	status := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
 	response := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_REGISTRATION)
 	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"status": status}
