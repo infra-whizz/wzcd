@@ -41,55 +41,73 @@ func (wz *WzcDaemonDispatcher) OnConsoleEvent(m *nats.Msg) {
 		case "list.clients.rejected":
 			go wz.console.sendListClientsRejected()
 		case "clients.accept":
-			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
-			if params != nil {
-				fingerprints := params.(map[string]interface{})["fingerprints"]
-				if !ok {
-					wz.GetLogger().Errorln("Discarding request to accept clients: unspecified target")
-				} else {
-					if fingerprints != nil {
-						go wz.console.acceptNewClients(fingerprints.([]interface{}))
-					} else {
-						go wz.console.acceptNewClients(make([]interface{}, 0))
-					}
-				}
-			}
+			wz.action_clientsAccept(envelope)
 		case "clients.reject":
-			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
-			if params != nil {
-				fingerprints := params.(map[string]interface{})["fingerprints"]
-				if fingerprints == nil {
-					wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
-					go wz.console.rejectClients(make([]interface{}, 0))
-				} else {
-					go wz.console.rejectClients(fingerprints.([]interface{}))
-				}
-			}
+			wz.action_clientsReject(envelope)
 		case "clients.delete":
-			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
-			if params != nil {
-				fingerprints := params.(map[string]interface{})["fingerprints"]
-				if fingerprints == nil {
-					wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
-				} else {
-					go wz.console.deleteClients(fingerprints.([]interface{}))
-				}
-			}
+			wz.action_clientsDelete(envelope)
 		case "clients.search":
-			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
-			if params != nil {
-				query := params.(map[string]interface{})["query"]
-				if query == nil || query.(string) == "" {
-					wz.GetLogger().Errorln("Discarding search request: unspecified query")
-				} else {
-					go wz.console.searchClients(query.(string))
-				}
-			}
+			wz.action_clientsSearch(envelope)
 		default:
 			wz.GetLogger().Debugln("Discarding console message: unsupported command -", command)
 		}
 	default:
 		wz.GetLogger().Debugln("Discarding unknown message from console channel:")
+	}
+}
+
+// Perform action of "client.accept"
+func (wz *WzcDaemonDispatcher) action_clientsAccept(envelope *wzlib_transport.WzGenericMessage) {
+	params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+	if params != nil {
+		fingerprints := params.(map[string]interface{})["fingerprints"]
+		if fingerprints != nil {
+			go wz.console.acceptNewClients(fingerprints.([]interface{}))
+		} else {
+			go wz.console.acceptNewClients(make([]interface{}, 0))
+		}
+	} else {
+		wz.GetLogger().Errorln("No params has been specified when accepting clients")
+	}
+}
+
+// Perform action of "client.reject"
+func (wz *WzcDaemonDispatcher) action_clientsReject(envelope *wzlib_transport.WzGenericMessage) {
+	params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+	if params != nil {
+		fingerprints := params.(map[string]interface{})["fingerprints"]
+		if fingerprints == nil {
+			wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
+			go wz.console.rejectClients(make([]interface{}, 0))
+		} else {
+			go wz.console.rejectClients(fingerprints.([]interface{}))
+		}
+	}
+}
+
+// Perform action of "client.delete"
+func (wz *WzcDaemonDispatcher) action_clientsDelete(envelope *wzlib_transport.WzGenericMessage) {
+	params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+	if params != nil {
+		fingerprints := params.(map[string]interface{})["fingerprints"]
+		if fingerprints == nil {
+			wz.GetLogger().Errorln("Discarding request to reject clients: unspecified target")
+		} else {
+			go wz.console.deleteClients(fingerprints.([]interface{}))
+		}
+	}
+}
+
+// Perform action of "client.search"
+func (wz *WzcDaemonDispatcher) action_clientsSearch(envelope *wzlib_transport.WzGenericMessage) {
+	params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
+	if params != nil {
+		query := params.(map[string]interface{})["query"]
+		if query == nil || query.(string) == "" {
+			wz.GetLogger().Errorln("Discarding search request: unspecified query")
+		} else {
+			go wz.console.searchClients(query.(string))
+		}
 	}
 }
 
