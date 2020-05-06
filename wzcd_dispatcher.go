@@ -3,7 +3,6 @@ package wzcd
 import (
 	"github.com/davecgh/go-spew/spew"
 	"github.com/infra-whizz/wzlib"
-	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
 	"github.com/nats-io/nats.go"
@@ -106,16 +105,9 @@ func (wz *WzcDaemonDispatcher) OnClientEvent(m *nats.Msg) {
 		wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
 	case wzlib_transport.MSGTYPE_REGISTRATION:
 		wz.GetLogger().Debugln("Registering new client")
-		wz.registerNewClient(envelope)
+		wz.console.registerNewClient(envelope)
 	default:
 		wz.GetLogger().Debugln("Discarding unknown message from client channel:")
 		spew.Dump(envelope)
 	}
-}
-
-func (wz *WzcDaemonDispatcher) registerNewClient(envelope *wzlib_transport.WzGenericMessage) {
-	status := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
-	response := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_REGISTRATION)
-	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"status": status}
-	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
 }

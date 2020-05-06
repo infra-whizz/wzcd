@@ -2,6 +2,7 @@ package wzcd
 
 import (
 	wzlib "github.com/infra-whizz/wzlib"
+	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 	wzlib_transport "github.com/infra-whizz/wzlib/transport"
 )
@@ -114,4 +115,11 @@ func (wz *WzConsoleEvents) sendListClientsRejected() {
 
 	// send
 	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
+
+func (wz *WzConsoleEvents) registerNewClient(envelope *wzlib_transport.WzGenericMessage) {
+	status := wz.dispatcher.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
+	response := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_REGISTRATION)
+	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"status": status}
+	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
 }
