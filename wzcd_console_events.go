@@ -49,3 +49,22 @@ func (wz *WzConsoleEvents) acceptNewClients(fingerprints []interface{}) {
 	// send
 	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
+
+func (wz *WzConsoleEvents) deleteClients(fingerprints []interface{}) {
+	wz.GetLogger().Infoln("Deleting clients")
+
+	// XXX - refactor - fingerprints: interface to string
+	fp := make([]string, len(fingerprints))
+	for idx, f := range fingerprints {
+		fp[idx] = f.(string)
+	}
+	missing := wz.dispatcher.daemon.GetDb().GetControllerAPI().GetClientsAPI().Delete(fp...)
+
+	// XXX - refactor - repeating code
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"deleted.missing": missing}
+
+	// send
+	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
