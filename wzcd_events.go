@@ -2,7 +2,6 @@ package wzcd
 
 import (
 	"github.com/davecgh/go-spew/spew"
-	wzcd_events "github.com/infra-whizz/wzcd/events"
 	"github.com/infra-whizz/wzlib"
 	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -12,7 +11,7 @@ import (
 
 type WzcDaemonEvents struct {
 	daemon  *WzcDaemon
-	console *wzcd_events.WzConsoleEvents
+	console *WzConsoleEvents
 	wzlib_logger.WzLogger
 }
 
@@ -20,7 +19,7 @@ type WzcDaemonEvents struct {
 func NewWzcDaemonEvents(daemon *WzcDaemon) *WzcDaemonEvents {
 	d := new(WzcDaemonEvents)
 	d.daemon = daemon
-	d.console = wzcd_events.NewWzConsoleEvents()
+	d.console = NewWzConsoleEvents()
 	return d
 }
 
