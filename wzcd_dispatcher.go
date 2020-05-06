@@ -40,7 +40,7 @@ func (wz *WzcDaemonDispatcher) OnConsoleEvent(m *nats.Msg) {
 		case "list.clients.new":
 			go wz.console.sendListClientsNew()
 		case "list.clients.rejected":
-			go wz.sendListClientsRejected()
+			go wz.console.sendListClientsRejected()
 		case "clients.accept":
 			params := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND_PARAMS]
 			if params != nil {
@@ -92,18 +92,6 @@ func (wz *WzcDaemonDispatcher) OnConsoleEvent(m *nats.Msg) {
 	default:
 		wz.GetLogger().Debugln("Discarding unknown message from console channel:")
 	}
-}
-
-func (wz *WzcDaemonDispatcher) sendListClientsRejected() {
-	rejected := wz.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRejected()
-
-	// XXX - refactor - repeating code
-	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
-	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
-	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"rejected": rejected}
-
-	// send
-	wz.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
 // OnClientEvent receives and dispatches messages on client channel
