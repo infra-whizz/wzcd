@@ -8,6 +8,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+func manageWhizz(ctx *cli.Context) error {
+	return nil
+}
+
 func run(ctx *cli.Context) error {
 	conf := nanoconf.NewConfig(ctx.String("config"))
 	controller := wzcd.NewWzcDaemon()
@@ -50,6 +54,45 @@ func main() {
 				Usage:    "Path to configuration file",
 				Required: false,
 				Value:    confpath.SetDefaultConfig(confpath.FindFirst()).FindDefault(),
+			},
+		},
+	}
+	app.Commands = []*cli.Command{
+		{
+			Name:   "whizz",
+			Usage:  "Manage Whizz remotes",
+			Action: manageWhizz,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "add",
+					Usage:   "Add public key in PEM format",
+					Aliases: []string{"a"},
+				},
+				&cli.BoolFlag{
+					Name:    "remove",
+					Usage:   "Remove public key",
+					Aliases: []string{"r", "d"},
+				},
+				&cli.StringFlag{
+					Name:    "path",
+					Usage:   "Path to the file",
+					Aliases: []string{"p"},
+				},
+				&cli.StringFlag{
+					Name:    "fingerprint",
+					Usage:   "Fingerprint of the PEM key",
+					Aliases: []string{"f"},
+				},
+				&cli.StringFlag{
+					Name:    "machineid",
+					Usage:   "Machine ID",
+					Aliases: []string{"i"},
+				},
+				&cli.StringFlag{
+					Name:    "fqdn",
+					Usage:   "FQDN of the Whizz host",
+					Aliases: []string{"n"},
+				},
 			},
 		},
 	}
