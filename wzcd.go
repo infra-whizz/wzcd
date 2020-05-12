@@ -44,6 +44,11 @@ func (wz *WzcDaemon) GetTransport() *wzlib_transport.WzdPubSub {
 	return wz.transport
 }
 
+// GetPkiManager for manage keys locally to the cluster database
+func (wz *WzcDaemon) GetPKIManager() *WzcPKIManager {
+	return wz.keymanager
+}
+
 // Run the daemon, prior setting it up.
 func (wz *WzcDaemon) Run() *WzcDaemon {
 	var err error
