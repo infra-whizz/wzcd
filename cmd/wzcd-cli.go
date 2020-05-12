@@ -30,6 +30,8 @@ func setupControllerInstance(ctx *cli.Context) *wzcd.WzcDaemon {
 			confDb.String("ssl_key", ""),
 			confDb.String("ssl_cert", ""))
 
+	controller.SetupMachineIdUtil("") // read-only mode, as it points to a default D-Bus file.
+
 	return controller
 }
 
