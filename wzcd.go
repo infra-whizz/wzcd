@@ -20,6 +20,7 @@ type WzcDaemon struct {
 	transport  *wzlib_transport.WzdPubSub
 	channels   *WzChannels
 	db         *wzlib_database.WzDBH
+	keymanager *WzcPKIManager
 	wzlib_logger.WzLogger
 }
 
@@ -29,6 +30,7 @@ func NewWzcDaemon() *WzcDaemon {
 	wz.channels = new(WzChannels)
 	wz.dispatcher = NewWzcDaemonDispatcher(wz)
 	wz.db = wzlib_database.NewWzDBH().WithControllerAPI()
+	wz.keymanager = NewWzcPKIManager().SetDbh(wz.db)
 	return wz
 }
 
