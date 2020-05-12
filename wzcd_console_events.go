@@ -89,6 +89,13 @@ func (wz *WzConsoleEvents) rejectClients(fingerprints []interface{}) {
 	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
 }
 
+func (wz *WzConsoleEvents) sendError(msg string) {
+	envelope := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_CLIENT)
+	envelope.Payload[wzlib_transport.PAYLOAD_BATCH_SIZE] = 1
+	envelope.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"error": msg}
+	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, envelope)
+}
+
 func (wz *WzConsoleEvents) sendListClientsNew() {
 	// call db stuff, obtain everything
 	registered := wz.dispatcher.daemon.GetDb().GetControllerAPI().GetClientsAPI().GetRegistered()
