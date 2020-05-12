@@ -1,6 +1,8 @@
 package wzcd
 
 import (
+	"fmt"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/infra-whizz/wzlib"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -22,16 +24,42 @@ func NewWzcDaemonDispatcher(daemon *WzcDaemon) *WzcDaemonDispatcher {
 	return d
 }
 
+func (wz *WzcDaemonDispatcher) verifyIncomingMessage(msg *wzlib_transport.WzGenericMessage) (bool, error) {
+	sig, ok := msg.Payload[wzlib_transport.PAYLOAD_RSA_SIGNATURE]
+	if !ok {
+		return false, fmt.Errorf("Message signature not found")
+	}
+	fp, ok := msg.Payload[wzlib_transport.PAYLOAD_RSA_FINGERPRINT]
+	if !ok {
+		return false, fmt.Errorf("Message pubkey fingerprint was not found")
+	}
+
+	pubkey := wz.daemon.GetDb().GetControllerAPI().GetKeysAPI().GetRSAPublicPEMByFingerprint(fp.(string))
+	if pubkey == nil {
+		return false, fmt.Errorf("No public key is registered by this fingerprint")
+	}
+
+	return wz.daemon.GetCryptoBundle().GetRSA().VerifyPem(pubkey, msg.GetSignableMessageContent(), sig.([]byte))
+}
+
 // OnConsoleEvent receives and dispatches messages on console channel
 func (wz *WzcDaemonDispatcher) OnConsoleEvent(m *nats.Msg) {
 	wz.GetLogger().Debugln("On Console channel Event")
 	envelope := wzlib_transport.NewWzEventMsgUtils().GetMessage(m.Data)
+
+	if ret, err := wz.verifyIncomingMessage(envelope); !ret {
+		wz.GetLogger().Errorf("Discarding unauthorised message: %s", err.Error())
+		wz.console.sendError(fmt.Sprintf("Unauthorised. Access denied: %s", err.Error()))
+		return
+	}
+
 	spew.Dump(envelope)
 	switch envelope.Type {
 	case wzlib_transport.MSGTYPE_CLIENT:
 		command, ok := envelope.Payload[wzlib_transport.PAYLOAD_COMMAND]
 		if !ok {
 			wz.GetLogger().Debugln("Discarding console message: unknown command")
+			wz.console.sendError("Unknown command.")
 			return
 		}
 

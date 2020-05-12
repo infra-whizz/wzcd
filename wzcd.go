@@ -3,6 +3,10 @@ package wzcd
 import (
 	"time"
 
+	wzlib_crypto "github.com/infra-whizz/wzlib/crypto"
+
+	wzlib_utils "github.com/infra-whizz/wzlib/utils"
+
 	wzlib "github.com/infra-whizz/wzlib"
 	wzlib_database "github.com/infra-whizz/wzlib/database"
 	wzlib_logger "github.com/infra-whizz/wzlib/logger"
@@ -20,6 +24,9 @@ type WzcDaemon struct {
 	transport  *wzlib_transport.WzdPubSub
 	channels   *WzChannels
 	db         *wzlib_database.WzDBH
+	keymanager *WzcPKIManager
+	crypto     *wzlib_crypto.WzCryptoBundle
+	wzlib_utils.WzMachineIDUtil
 	wzlib_logger.WzLogger
 }
 
@@ -29,6 +36,9 @@ func NewWzcDaemon() *WzcDaemon {
 	wz.channels = new(WzChannels)
 	wz.dispatcher = NewWzcDaemonDispatcher(wz)
 	wz.db = wzlib_database.NewWzDBH().WithControllerAPI()
+	wz.keymanager = NewWzcPKIManager().SetDbh(wz.db)
+	wz.crypto = wzlib_crypto.NewWzCryptoBundle()
+
 	return wz
 }
 
@@ -37,9 +47,19 @@ func (wz *WzcDaemon) GetDb() *wzlib_database.WzDBH {
 	return wz.db
 }
 
+// GetCryptoBundle
+func (wz *WzcDaemon) GetCryptoBundle() *wzlib_crypto.WzCryptoBundle {
+	return wz.crypto
+}
+
 // GetTransport for the MQ
 func (wz *WzcDaemon) GetTransport() *wzlib_transport.WzdPubSub {
 	return wz.transport
+}
+
+// GetPkiManager for manage keys locally to the cluster database
+func (wz *WzcDaemon) GetPKIManager() *WzcPKIManager {
+	return wz.keymanager
 }
 
 // Run the daemon, prior setting it up.
