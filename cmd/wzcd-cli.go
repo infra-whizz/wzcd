@@ -10,9 +10,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func setupControllerInstance(ctx *cli.Context) *wzcd.WzcDaemon {
+func setupControllerInstance(ctx *cli.Context, level logrus.Level) *wzcd.WzcDaemon {
 	conf := nanoconf.NewConfig(ctx.String("config"))
 	controller := wzcd.NewWzcDaemon()
+	controller.GetLogger().SetLevel(level)
 
 	// Setup MQ
 	controller.GetTransport().AddNatsServerURL(
@@ -72,7 +73,7 @@ func appManagePKI(ctx *cli.Context) error {
 
 // Main runner function
 func appMainRun(ctx *cli.Context) error {
-	setupControllerInstance(ctx).Run().AppLoop()
+	setupControllerInstance(ctx, logrus.DebugLevel).Run().AppLoop()
 	cli.ShowAppHelpAndExit(ctx, 1)
 	return nil
 }
