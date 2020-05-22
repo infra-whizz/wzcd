@@ -6,10 +6,12 @@ import (
 
 	wzlib_database "github.com/infra-whizz/wzlib/database"
 	wzlib_database_controller "github.com/infra-whizz/wzlib/database/controller"
+	wzlib_logger "github.com/infra-whizz/wzlib/logger"
 )
 
 type WzcPKIManager struct {
 	db *wzlib_database.WzDBH
+	wzlib_logger.WzLogger
 }
 
 func NewWzcPKIManager() *WzcPKIManager {
