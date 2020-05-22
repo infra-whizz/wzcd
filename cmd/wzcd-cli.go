@@ -1,12 +1,14 @@
 package main
 
 import (
+	"fmt"
 	"os"
-
-	wzlib_utils "github.com/infra-whizz/wzlib/utils"
+	"path"
 
 	"github.com/infra-whizz/wzcd"
+	wzlib_utils "github.com/infra-whizz/wzlib/utils"
 	"github.com/isbm/go-nanoconf"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,8 +33,8 @@ func setupControllerInstance(ctx *cli.Context, level logrus.Level) *wzcd.WzcDaem
 			confDb.String("ssl_key", ""),
 			confDb.String("ssl_cert", ""))
 
+	controller.SetPKIDir(conf.Root().String("pki", ""))
 	controller.SetupMachineIdUtil("") // read-only mode, as it points to a default D-Bus file.
-
 	return controller
 }
 
@@ -44,9 +46,55 @@ func b2i(val bool) int {
 	}
 }
 
-// PKI manager function
-func appManagePKI(ctx *cli.Context) error {
-	controller := setupControllerInstance(ctx)
+// Manage Cluster PKI
+func appManageClusterPKI(ctx *cli.Context) error {
+	controller := setupControllerInstance(ctx, logrus.DebugLevel)
+	controller.GetDb().Open()
+	defer controller.GetDb().Close()
+
+	if ctx.Bool("show") {
+		clusterFingerprint := controller.GetPKIManager().GetClusterPublicPEMKeyFingerprint()
+		if clusterFingerprint != "" {
+			fmt.Println("Cluster fingerprint:", clusterFingerprint)
+		} else {
+			fmt.Println("No cluster PKI has been yet defined. Please add one!")
+			os.Exit(wzlib_utils.EX_UNAVAILABLE)
+		}
+	} else if ctx.Bool("rotate-rsa-keys") {
+		if ctx.String("public") != "" || ctx.String("private") != "" {
+			if ctx.String("public") == "" || ctx.String("private") == "" {
+				fmt.Println("Unable to set RSA keypair: should be defined both public and private key.")
+				os.Exit(wzlib_utils.EX_USAGE)
+			} else {
+				fmt.Println("Set RSA keypair")
+				if err := controller.GetPKIManager().RegisterClusterPEMKeyPair(ctx.String("public"), ctx.String("private")); err != nil {
+					fmt.Println("Error registering PEM pair:", err.Error())
+				}
+			}
+		} else {
+			fmt.Println("Rotate with automatic pre-generation")
+			if err := controller.GetCryptoBundle().GetRSA().GenerateKeyPair(controller.GetPKIDir()); err != nil {
+				fmt.Println("Error RSA keypair rotation:", err.Error())
+			}
+			pubkeyPath := path.Join(controller.GetPKIDir(), "public.pem")
+			privkeyPath := path.Join(controller.GetPKIDir(), "private.pem")
+			if err := controller.GetPKIManager().RegisterClusterPEMKeyPair(pubkeyPath, privkeyPath); err != nil {
+				fmt.Println("Error rotating PEM pair:", err.Error())
+			}
+		}
+	} else {
+		if err := cli.ShowSubcommandHelp(ctx); err != nil {
+			fmt.Println("Error:", err.Error())
+		}
+		os.Exit(wzlib_utils.EX_USAGE)
+	}
+
+	return nil
+}
+
+// Manage remote PKI
+func appManageRemotePKI(ctx *cli.Context) error {
+	controller := setupControllerInstance(ctx, logrus.DebugLevel)
 	controller.GetDb().Open()
 	defer controller.GetDb().Close()
 
