@@ -99,9 +99,37 @@ func main() {
 	}
 	app.Commands = []*cli.Command{
 		{
-			Name:   "pki",
+			Name:   "cluster",
+			Usage:  "Manage PKI for the entire Whizz cluster",
+			Action: appManageClusterPKI,
+			Flags: []cli.Flag{
+				&cli.BoolFlag{
+					Name:    "show",
+					Usage:   "Show cluster RSA keypair (default)",
+					Aliases: []string{"l"},
+				},
+				&cli.BoolFlag{
+					Name: "rotate-rsa-keys",
+					Usage: "Rotate cluster RSA keypair. Keys wil be re-generated into a default directory. " +
+						"\n\tSpecify 'public' and 'private' for alternative paths." +
+						"\n\tWARNING: This operation will require update RSA public \n\tkeys on all remotes!",
+				},
+				&cli.StringFlag{
+					Name:    "public",
+					Usage:   "Path to the public key in PEM format for the cluster",
+					Aliases: []string{"u"},
+				},
+				&cli.StringFlag{
+					Name:    "private",
+					Usage:   "Path to the private key in PEM format of the cluster",
+					Aliases: []string{"i"},
+				},
+			},
+		},
+		{
+			Name:   "remote",
 			Usage:  "Manage PKI of Whizz remotes",
-			Action: appManagePKI,
+			Action: appManageRemotePKI,
 			Flags: []cli.Flag{
 				&cli.BoolFlag{
 					Name:    "list",
