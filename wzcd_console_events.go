@@ -128,5 +128,14 @@ func (wz *WzConsoleEvents) registerNewClient(envelope *wzlib_transport.WzGeneric
 	status := wz.dispatcher.daemon.GetDb().GetControllerAPI().GetClientsAPI().Register(wzlib_database_controller.NewWzClientFromPayload(envelope.Payload))
 	response := wzlib_transport.NewWzMessage(wzlib_transport.MSGTYPE_REGISTRATION)
 	response.Payload[wzlib_transport.PAYLOAD_FUNC_RET] = map[string]interface{}{"status": status}
+
+	pem, err := wz.dispatcher.daemon.GetCryptoBundle().GetRSA().GetPublicPEMKey(wz.dispatcher.daemon.GetPKIDir())
+	if err != nil {
+		wz.GetLogger().Errorln("Error sending RSA public key:", err.Error())
+	} else {
+		response.Payload[wzlib_transport.PAYLOAD_RSA] = pem
+		response.Payload[wzlib_transport.PAYLOAD_RSA_FINGERPRINT] = wz.dispatcher.daemon.GetCryptoBundle().GetUtils().PEMKeyFingerprintFromBytes(pem)
+	}
+
 	wz.dispatcher.daemon.GetTransport().PublishEnvelopeToChannel(wzlib.CHANNEL_CONTROLLER, response)
 }
