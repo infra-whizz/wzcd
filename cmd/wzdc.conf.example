@@ -1,3 +1,14 @@
 transport:
   host: 123.123.123.123
   port: 4222
+
+pki: /etc/whizz/pki
+
+db:
+  user: whizz
+  database: whizz
+  host: localhost
+  port: 26257
+  ssl_root: "/etc/whizz/pki/db/ca.crt"
+  ssl_key: "/etc/whizz/pki/db/client.whizz.key"
+  ssl_cert: "/etc/whizz/pki/db/client.whizz.crt"
