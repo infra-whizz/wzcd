@@ -28,6 +28,8 @@ type WzcDaemon struct {
 	crypto     *wzlib_crypto.WzCryptoBundle
 	wzlib_utils.WzMachineIDUtil
 	wzlib_logger.WzLogger
+
+	pkiDir string
 }
 
 func NewWzcDaemon() *WzcDaemon {
@@ -40,6 +42,17 @@ func NewWzcDaemon() *WzcDaemon {
 	wz.crypto = wzlib_crypto.NewWzCryptoBundle()
 
 	return wz
+}
+
+// SetPKIDir value
+func (wz *WzcDaemon) SetPKIDir(pkiDir string) *WzcDaemon {
+	wz.pkiDir = pkiDir
+	return wz
+}
+
+// GetPKIDir value
+func (wz *WzcDaemon) GetPKIDir() string {
+	return wz.pkiDir
 }
 
 // GetDb connection
